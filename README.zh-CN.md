@@ -29,6 +29,19 @@ git-flow-next 是 Tower 团队用 Go 重写的 git-flow。本插件为所有分�
 
 ## 安装
 
+### 使用安装脚本
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/install.sh | sh
+```
+
+脚本会按 `~/.zshrc` 解析出的自定义插件目录克隆插件，在 `plugins` 数组中加入
+`git-flow-next`（修改前先备份一份带时间戳的 `~/.zshrc`），并提示 git-flow-next
+可执行文件是否已安装。再次运行即更新插件，加 `--uninstall` 卸载，`--help`
+列出其余选项（`--dir`、`--repo`、`--ref`、`--no-zshrc`）。
+
+### 手动安装
+
 把仓库克隆到 Oh My Zsh 的自定义插件目录，并以插件名作为目录名：
 
 ```zsh
@@ -45,6 +58,18 @@ plugins=(git git-flow-next)
 本插件应当**替代** Oh My Zsh 自带的 `git-flow` 或 `git-flow-avh` 插件，而不是与它们同时加载：
 它们提供同名的 `gfl*` 别名和同一份 `git flow` 补全；在 Homebrew 中 git-flow-next 也与原版
 git-flow 冲突，因为两者安装同一个可执行文件。
+
+### 卸载
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/install.sh |
+  sh -s -- --uninstall
+```
+
+它会删除插件目录、`plugins` 数组中的对应项以及补全缓存。手动卸载：删除
+`"${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/git-flow-next"`，从数组中移除
+`git-flow-next`，再删除 `$ZSH_CACHE_DIR/git-flow-next-completion.zsh`。
+git-flow-next 可执行文件不会被安装，也不会被删除。
 
 ## 别名
 

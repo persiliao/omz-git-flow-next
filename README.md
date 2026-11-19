@@ -33,6 +33,21 @@ like `2.1.0 (git-flow-next)`.
 
 ## Installation
 
+### With the installer
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/install.sh | sh
+```
+
+The installer clones the plugin into the custom plugins directory it resolves
+from `~/.zshrc`, adds `git-flow-next` to the `plugins` array — after keeping a
+timestamped backup of the file — and reports whether the git-flow-next binary
+is available. Run it again to update the plugin, add `--uninstall` to take it
+out again, and `--help` lists the remaining options (`--dir`, `--repo`, `--ref`,
+`--no-zshrc`).
+
+### By hand
+
 Clone the repository into your Oh My Zsh custom plugins directory, under the
 name of the plugin:
 
@@ -51,6 +66,20 @@ Load this plugin *instead of* the bundled `git-flow` or `git-flow-avh` plugins,
 not together with them: they provide the same `gfl*` aliases and the same
 `git flow` completion, and git-flow-next conflicts with the original git-flow
 formula in Homebrew because both install the same binary.
+
+### Uninstall
+
+```zsh
+curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/install.sh |
+  sh -s -- --uninstall
+```
+
+That removes the plugin directory, its entry in the `plugins` array and the
+completion cache. By hand: delete
+`"${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/git-flow-next"`, drop
+`git-flow-next` from the array, and delete
+`$ZSH_CACHE_DIR/git-flow-next-completion.zsh`. The git-flow-next binary itself
+is never installed or removed.
 
 ## Aliases
 

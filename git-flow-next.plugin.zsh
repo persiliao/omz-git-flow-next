@@ -3,14 +3,18 @@
 # Aliases and shell completion for git-flow-next (https://git-flow.sh), the Go
 # reimplementation of git-flow maintained by the team at Tower.
 #
-# Install it as a custom plugin:
+# Install it with the installer shipped next to this file:
+#
+#   ./install.sh
+#
+# or clone it into the custom plugins directory and add `git-flow-next` to the
+# plugins array in ~/.zshrc:
 #
 #   git clone https://github.com/persiliao/omz-git-flow-next \
 #     "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/git-flow-next"
 #
-# and add `git-flow-next` to the plugins array in ~/.zshrc. Load it instead of
-# the `git-flow` / `git-flow-avh` plugins, not together with them: they provide
-# the same `gfl*` aliases and the same `git flow` completion.
+# Load it instead of the `git-flow` / `git-flow-avh` plugins, not together with
+# them: they provide the same `gfl*` aliases and the same `git flow` completion.
 #
 # @author Persi.Liao <xiangchu.liao@gmail.com>
 
