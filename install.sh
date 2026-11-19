@@ -18,6 +18,7 @@ REPO=https://github.com/persiliao/omz-git-flow-next
 REF=
 DIR=
 MODE=install
+FROM_URL=no
 ZSHRC=${ZSHRC:-$HOME/.zshrc}
 EDIT_ZSHRC=yes
 
@@ -31,8 +32,12 @@ Usage: install.sh [OPTION]
 
 Install the $PLUGIN plugin for Oh My Zsh, or remove it again with --uninstall.
 
+Run it from a clone of the repository and that clone becomes the installed
+plugin: it is linked into the custom plugins directory instead of being cloned
+a second time, and updating it is a plain git pull in the clone.
+
 Options:
-  -u, --uninstall   Remove the plugin directory and disable it in ~/.zshrc
+  -u, --uninstall   Remove the plugin directory or link, and the zshrc entry
   -d, --dir PATH    Custom plugins directory, or the plugin directory itself
                     (default: \$ZSH_CUSTOM, then \$ZSH/custom, ~/.oh-my-zsh/custom)
       --repo URL    Clone from URL instead of $REPO
@@ -53,11 +58,13 @@ while [ $# -gt 0 ]; do
     --repo)
       [ $# -ge 2 ] && [ -n "$2" ] || die "--repo needs a URL"
       REPO=$2
+      FROM_URL=yes
       shift
       ;;
     --ref)
       [ $# -ge 2 ] && [ -n "$2" ] || die "--ref needs a name"
       REF=$2
+      FROM_URL=yes
       shift
       ;;
     --no-zshrc) EDIT_ZSHRC=no ;;
@@ -112,6 +119,29 @@ else
   [ -n "$CUSTOM_DIR" ] || CUSTOM_DIR="$ZSH_DIR/custom"
 
   TARGET="$CUSTOM_DIR/plugins/$PLUGIN"
+fi
+
+# Canonical form of a directory, following a symlink; echoed back when it does
+# not exist, so a missing target never equals a checkout.
+canonical() {
+  (CDPATH= cd -- "$1" 2>/dev/null && pwd -P) || printf '%s\n' "$1"
+}
+
+# The checkout the script runs from, if it is one: a clone of this repository
+# is the plugin already, so there is no reason to clone it a second time.
+SRC_REPO=
+if [ "$FROM_URL" = no ]; then
+  src_dir=$(dirname -- "$0")
+  if [ -f "$src_dir/$PLUGIN.plugin.zsh" ]; then
+    SRC_REPO=$(CDPATH= cd -- "$src_dir" && pwd -P)
+  fi
+fi
+
+# What the plugin directory already is: a checkout of this repository, some
+# other directory, a symlink, or nothing.
+target_real=
+if [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
+  target_real=$(canonical "$TARGET")
 fi
 
 # Add or remove one entry of the plugins array in ~/.zshrc. A multi-line array
@@ -181,7 +211,14 @@ zshrc_patch() {
 }
 
 if [ "$MODE" = uninstall ]; then
-  if [ -d "$TARGET" ]; then
+  # A link goes first: dropping it never touches the tree behind it, which may
+  # well be the checkout running this script.
+  if [ -L "$TARGET" ]; then
+    log "Removing the link at $TARGET"
+    rm -f -- "$TARGET"
+  elif [ -n "$SRC_REPO" ] && [ "$target_real" = "$SRC_REPO" ]; then
+    log "Keeping the checkout at $TARGET, it is the one running this script"
+  elif [ -d "$TARGET" ]; then
     if [ -f "$TARGET/$PLUGIN.plugin.zsh" ] || [ -d "$TARGET/.git" ]; then
       log "Removing $TARGET"
       rm -rf -- "$TARGET"
@@ -206,12 +243,30 @@ if [ -z "$DIR" ] && [ ! -d "$TARGET" ] && [ ! -d "$CUSTOM_DIR" ]; then
   die "Oh My Zsh not found under $CUSTOM_DIR. Install it first, or pass --dir."
 fi
 
-if [ -d "$TARGET/.git" ]; then
+if [ -n "$SRC_REPO" ] && [ "$target_real" = "$SRC_REPO" ]; then
+  # The plugin directory already is the checkout this script runs from, either
+  # because it was cloned into place or because an earlier run linked it.
+  log "Using the checkout at $SRC_REPO"
+elif [ -n "$SRC_REPO" ] && [ -z "$target_real" ]; then
+  log "Linking $SRC_REPO to $TARGET"
+  command mkdir -p -- "$(dirname "$TARGET")"
+  ln -s -- "$SRC_REPO" "$TARGET"
+elif [ -L "$TARGET" ]; then
+  # A link is not ours to update: its source is, and that tree belongs to the
+  # user, so git pull never runs through it.
+  log "Using the link from $TARGET to $target_real"
+  if [ -n "$SRC_REPO" ]; then
+    warn "it does not point at $SRC_REPO; --uninstall to relink"
+  fi
+elif [ -d "$TARGET/.git" ]; then
   log "Updating $TARGET"
+  if [ -n "$SRC_REPO" ]; then
+    warn "$TARGET is a copy of its own; --uninstall it to link $SRC_REPO instead"
+  fi
   if ! git -C "$TARGET" pull --ff-only >/dev/null 2>&1; then
     warn "could not update $TARGET, keeping the version you have"
   fi
-elif [ -e "$TARGET" ]; then
+elif [ -e "$TARGET" ] || [ -L "$TARGET" ]; then
   if [ -f "$TARGET/$PLUGIN.plugin.zsh" ]; then
     warn "$TARGET is not a git clone, keeping the files you have"
   else

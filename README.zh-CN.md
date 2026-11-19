@@ -40,6 +40,16 @@ curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/in
 可执行文件是否已安装。再次运行即更新插件，加 `--uninstall` 卸载，`--help`
 列出其余选项（`--dir`、`--repo`、`--ref`、`--no-zshrc`）。
 
+已经 clone 过本仓库？在 clone 目录里直接运行脚本，这份 clone 就是插件本身：
+脚本把它软链接进自定义插件目录，不再重复 clone，之后在 clone 里 `git pull`
+即可完成更新。脚本不会在你的工作副本里 pull、删除或改写任何文件；把 clone
+直接放在插件目录里的，则就地启用。
+
+```zsh
+git clone https://github.com/persiliao/omz-git-flow-next
+cd omz-git-flow-next && ./install.sh
+```
+
 ### 手动安装
 
 把仓库克隆到 Oh My Zsh 的自定义插件目录，并以插件名作为目录名：
@@ -66,7 +76,8 @@ curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/in
   sh -s -- --uninstall
 ```
 
-它会删除插件目录、`plugins` 数组中的对应项以及补全缓存。手动卸载：删除
+它会删除插件目录（或指向它的软链接）、`plugins` 数组中的对应项以及补全缓存；
+运行脚本的那份仓库 clone 会被保留。手动卸载：删除
 `"${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/git-flow-next"`，从数组中移除
 `git-flow-next`，再删除 `$ZSH_CACHE_DIR/git-flow-next-completion.zsh`。
 git-flow-next 可执行文件不会被安装，也不会被删除。

@@ -46,6 +46,17 @@ is available. Run it again to update the plugin, add `--uninstall` to take it
 out again, and `--help` lists the remaining options (`--dir`, `--repo`, `--ref`,
 `--no-zshrc`).
 
+Already have a clone of the repository? Run the script from inside it and that
+clone *is* the plugin: it is linked into the custom plugins directory instead of
+being cloned a second time, so `git pull` in the clone is all an update needs.
+Nothing is ever pulled, deleted or rewritten inside your own working tree, and a
+clone you placed in the plugins directory yourself is used in place.
+
+```zsh
+git clone https://github.com/persiliao/omz-git-flow-next
+cd omz-git-flow-next && ./install.sh
+```
+
 ### By hand
 
 Clone the repository into your Oh My Zsh custom plugins directory, under the
@@ -74,8 +85,9 @@ curl -fsSL https://raw.githubusercontent.com/persiliao/omz-git-flow-next/main/in
   sh -s -- --uninstall
 ```
 
-That removes the plugin directory, its entry in the `plugins` array and the
-completion cache. By hand: delete
+That removes the plugin directory or the link to it, its entry in the `plugins`
+array, and the completion cache; a clone of the repository you ran the script
+from is kept. By hand: delete
 `"${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/git-flow-next"`, drop
 `git-flow-next` from the array, and delete
 `$ZSH_CACHE_DIR/git-flow-next-completion.zsh`. The git-flow-next binary itself
