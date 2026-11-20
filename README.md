@@ -104,7 +104,7 @@ is never installed or removed.
 | `gflo`   | `git flow overview`    | Show the configured branches and active topics   |
 | `gflc`   | `git flow config list` | Show the resolved git-flow configuration         |
 | `gflv`   | `git flow version`     | Show the git-flow-next version                   |
-| `gflfin` | `git flow finish`      | Finish the branch you are on, type auto-detected |
+| `gflfin` | `git flow finish`      | Finish the branch you are on, asking if needed   |
 | `gflpub` | `git flow publish`     | Publish the branch you are on                    |
 | `gflupd` | `git flow update`      | Update the branch you are on from its parent     |
 | `gflreb` | `git flow rebase`      | Rebase the branch you are on onto its parent     |
@@ -143,6 +143,38 @@ gflrs 1.4.0                  # git flow release start 1.4.0
 gflff --squash --no-push     # git flow feature finish --squash --no-push
 gflhf                        # git flow hotfix finish   (current hotfix)
 ```
+
+### Finishing a branch that has no prefix
+
+git-flow-next takes the topic type from the prefix of the branch you are
+standing on, and stops on a branch that carries none — `codex/i18n-pass` is not
+a topic branch:
+
+```
+Error: current branch 'codex/i18n-pass' is not a valid topic branch
+       (use explicit command, e.g., git flow feature finish)
+```
+
+Naming the branch is all git-flow-next needs to finish it after all, so `gflfin`
+and the `gfl<type>f` aliases ask instead of stopping there:
+
+```
+Branch 'codex/i18n-pass' is not a git-flow topic branch.
+Finish it as a feature branch? [y/N] y
+Warning: Branch 'codex/i18n-pass' is not a standard feature branch (missing prefix 'feature/').
+Finishing this branch will:
+1. Merge it into 'develop' using the merge strategy
+3. Delete the branch after successful merge
+Do you want to continue? [y/N]:
+```
+
+Saying yes only reaches git-flow-next's own confirmation, which still lists the
+merge it is about to make, and nothing runs on no. The question is asked where
+it can be answered: on an ordinary branch of a repository git-flow is set up in,
+never on the trunk or `develop`, never on a branch that already has a prefix,
+and never without a terminal in front of the command — a script or an agent gets
+git-flow-next's own error, exactly as before. Commands other than `finish` need
+the prefix to work at all, so `gflpub`, `gflupd` and the rest keep failing.
 
 ## Completion
 

@@ -93,7 +93,7 @@ git-flow-next 可执行文件不会被安装，也不会被删除。
 | `gflo`   | `git flow overview`    | 查看分支配置与进行中的主题分支   |
 | `gflc`   | `git flow config list` | 查看解析后的 git-flow 配置       |
 | `gflv`   | `git flow version`     | 查看 git-flow-next 版本          |
-| `gflfin` | `git flow finish`      | 完结当前分支，类型自动识别       |
+| `gflfin` | `git flow finish`      | 完结当前分支，必要时先询问       |
 | `gflpub` | `git flow publish`     | 推送（发布）当前分支             |
 | `gflupd` | `git flow update`      | 用父分支更新当前分支             |
 | `gflreb` | `git flow rebase`      | 把当前分支 rebase 到父分支       |
@@ -129,6 +129,34 @@ gflrs 1.4.0                  # git flow release start 1.4.0
 gflff --squash --no-push     # git flow feature finish --squash --no-push
 gflhf                        # git flow hotfix finish   （当前 hotfix）
 ```
+
+### 完结没有前缀的分支
+
+git-flow-next 依据当前分支名前缀判断主题类型，遇到没有前缀的分支会直接停下——`codex/i18n-pass`
+并不是主题分支：
+
+```
+Error: current branch 'codex/i18n-pass' is not a valid topic branch
+       (use explicit command, e.g., git flow feature finish)
+```
+
+把分支名写出来 git-flow-next 照样能完结它，所以 `gflfin` 与 `gfl<类型>f` 这些别名改为先问一句，
+而不是就此中断：
+
+```
+Branch 'codex/i18n-pass' is not a git-flow topic branch.
+Finish it as a feature branch? [y/N] y
+Warning: Branch 'codex/i18n-pass' is not a standard feature branch (missing prefix 'feature/').
+Finishing this branch will:
+1. Merge it into 'develop' using the merge strategy
+3. Delete the branch after successful merge
+Do you want to continue? [y/N]:
+```
+
+回答 y 也只是走到 git-flow-next 自己的二次确认，它仍会列出即将执行的合并；回答 n 什么都不做。
+询问只发生在能问的地方：git-flow 已配置的仓库里的普通分支，主干与 `develop` 不问，本来就有前缀的
+主题分支不问，命令面前没有终端时同样不问——脚本或 agent 拿到的仍是 git-flow-next 原本的报错。
+`finish` 之外的命令没有前缀根本无从执行，所以 `gflpub`、`gflupd` 等保持原样继续报错。
 
 ## 补全
 
