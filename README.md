@@ -195,12 +195,20 @@ copy of it so no process has to be spawned per prompt:
   to `_git-flow`, and hands every other subcommand straight back to `_git`. The
   wrapper is skipped when `_git` is not what completes `git` in your shell, and
   you can drop it again with `compdef _git git`;
-- subcommands, flags and branch names are all read from the binary, so a newer
-  git-flow-next completes its own new commands without a plugin update.
+- subcommands, flags and their descriptions are all read from the binary, so a
+  newer git-flow-next completes its own new commands without a plugin update.
 
-Delete the cache file by hand if completion ever looks stale. Aliases are
-shortcuts rather than completions: `gflff <TAB>` is up to zsh's alias handling,
-while `git flow feature finish <TAB>` always reaches git-flow-next.
+Delete the cache file by hand if completion ever looks stale.
+
+Aliases complete as what they expand to, so `gflpub --<TAB>` offers the flags of
+`git flow publish`. The finish aliases expand to a plugin function instead,
+which is why the plugin registers a completer for it: the line is rewritten to
+the `git flow [<type>] finish …` the alias stands for, so `gflff --<TAB>` and
+`gflfin --<TAB>` list exactly what the command lists.
+
+What is missing everywhere is positional values — git-flow-next completes flags
+only, so a `<TAB>` where a branch name belongs falls back to file names, on
+`git flow feature finish <TAB>` just as much as on `gflff <TAB>`.
 
 ## Configuration
 

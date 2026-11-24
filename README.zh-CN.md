@@ -171,10 +171,16 @@ git-flow-next 自带 zsh 补全脚本生成器，插件会缓存一份，避免�
   在补全 `git <子命令>` 时自动接管——但 zsh 5.9 重写后丢掉了这一步，导致 `git flow <TAB>` 一个候选都不给——
   因此插件会包装 `git` 的补全：只把 `git flow …` 转给 `_git-flow`，其余子命令原封不动交还 `_git`。
   若你 shell 里的 `git` 补全不是 `_git`，插件不会插手；也可以手动执行 `compdef _git git` 撤销这层包装；
-- 子命令、参数与分支名都由二进制实时提供，升级 git-flow-next 后无需更新插件即可获得新命令的补全。
+- 子命令、参数及其说明都由二进制实时提供，升级 git-flow-next 后无需更新插件即可获得新命令的补全。
 
-如果补全看起来过期，手动删除该缓存文件即可。别名只是简写而非补全：`gflff <TAB>` 取决于 zsh 的别名展开，
-而 `git flow feature finish <TAB>` 一定能抵达 git-flow-next。
+如果补全看起来过期，手动删除该缓存文件即可。
+
+别名按它展开后的命令补全，所以 `gflpub --<TAB>` 给出的是 `git flow publish` 的参数；完结类别名展开成
+插件函数，因此插件为它另注册了补全——把命令行还原成别名所代表的 `git flow [<类型>] finish …`，
+于是 `gflff --<TAB>`、`gflfin --<TAB>` 的候选与直接执行命令时完全一致。
+
+各处都缺的是位置参数：git-flow-next 只补参数名，不补分支名，所以在应当填分支名的位置 `<TAB>` 会退回文件名，
+`git flow feature finish <TAB>` 与 `gflff <TAB>` 表现相同。
 
 ## 配置
 

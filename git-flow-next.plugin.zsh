@@ -31,7 +31,7 @@ alias gflv='git flow version'
 # Shorthands for the branch you are standing on. git-flow-next derives the
 # topic type from the branch prefix, so nothing has to be spelled out. Only
 # `gflfin` is more than the command it names: see "Finishing a branch".
-alias gflfin='_git-flow-next-finish ""'
+alias gflfin='_git-flow-next-finish auto'
 alias gflpub='git flow publish'
 alias gflupd='git flow update'
 alias gflreb='git flow rebase'
@@ -112,6 +112,14 @@ _git-flow-next-plain-branch() {
 _git-flow-next-finish() {
   local type=$1 arg branch
   shift
+
+  # `gflfin` spells the type it does not have as `auto`, which keeps it a word
+  # of its own for the completion further down: alias expansion reaches the
+  # completion code before quote removal, so an empty argument would get there
+  # as a literal `""`.
+  if [[ $type == auto ]]; then
+    type=
+  fi
 
   local -a flow=(git flow)
   [[ -n $type ]] && flow+=$type
@@ -202,6 +210,38 @@ if (( $+functions[compdef] )) && command -v git-flow >/dev/null 2>&1; then
       _git "$@"
     }
     compdef _git-flow-bridge git
+  fi
+
+  # The finish aliases call `_git-flow-next-finish` rather than `git flow …`,
+  # and zsh completes an alias by what its expansion starts with, so their
+  # arguments have nothing to complete against until they are pointed back at
+  # git-flow-next. Rewrite the line into the command the alias stands for.
+  if (( $+functions[_git-flow] )); then
+    _git-flow-next-finish-complete() {
+      local -a _gfn_words
+      local _gfn_current=$CURRENT _gfn_status=0
+      _gfn_words=("$words[@]")
+
+      # The words are the function, the type the alias spelled out — `auto` for
+      # the type-agnostic `gflfin` — and then whatever was typed after it. The
+      # `finish` the function runs is not on the line, so add it too.
+      [[ ${words[2]} == (auto|bugfix|feature|hotfix|release|support) ]] || return 1
+
+      if [[ ${words[2]} == auto ]]; then
+        words=(git-flow finish "${(@)_gfn_words[3,-1]}")
+      else
+        words=(git-flow "$words[2]" finish "${(@)_gfn_words[3,-1]}")
+        (( CURRENT++ ))
+      fi
+
+      _git-flow
+      _gfn_status=$?
+
+      words=("${_gfn_words[@]}")
+      CURRENT=$_gfn_current
+      return $_gfn_status
+    }
+    compdef _git-flow-next-finish-complete _git-flow-next-finish
   fi
 
   unset _gfn_cache _gfn_version
