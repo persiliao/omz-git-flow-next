@@ -158,6 +158,9 @@ Do you want to continue? [y/N]:
 主题分支不问，命令面前没有终端时同样不问——脚本或 agent 拿到的仍是 git-flow-next 原本的报错。
 `finish` 之外的命令没有前缀根本无从执行，所以 `gflpub`、`gflupd` 等保持原样继续报错。
 
+这一问是插件加的，不是 git-flow-next 自带：`…f` 这些别名调用插件的 `_git-flow-next-finish`，
+`which gflfin` 打印的就是它；自己直接敲 `git flow finish` 仍然原样交给 git-flow-next。
+
 ## 补全
 
 git-flow-next 自带 zsh 补全脚本生成器，插件会缓存一份，避免每次补全都要启动进程：
@@ -181,7 +184,7 @@ git-flow-next 自带 zsh 补全脚本生成器，插件会缓存一份，避免�
 | 配置项       | 默认值 | 说明                                                                                                             |
 | ------------ | ------ | ---------------------------------------------------------------------------------------------------------------- |
 | `shell-init` | `no`   | 执行 `git flow shell-init zsh`，把 `git` 包装成函数，使 `git flow worktree add` 与 `<type> start --worktree` 同时切换当前 shell 所在目录 |
-| `aliases`    | `yes`  | Oh My Zsh 通用开关：设为 `no` 时加载插件但不定义任何别名                                                          |
+| `aliases`    | `yes`  | Oh My Zsh 通用开关：设为 `no` 时加载插件但不定义任何别名；`_git-flow-next-*` 辅助函数仍会定义，没有别名调用它们时不做事                                |
 
 ```zsh
 # 新建 worktree 后自动进入该目录

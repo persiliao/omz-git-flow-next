@@ -176,6 +176,10 @@ and never without a terminal in front of the command — a script or an agent ge
 git-flow-next's own error, exactly as before. Commands other than `finish` need
 the prefix to work at all, so `gflpub`, `gflupd` and the rest keep failing.
 
+The prompt comes from the plugin rather than from git-flow-next: the `…f`
+aliases call its `_git-flow-next-finish`, which is what `which gflfin` prints,
+and typing `git flow finish` yourself still goes straight to git-flow-next.
+
 ## Completion
 
 git-flow-next generates its own zsh completion, and the plugin keeps a cached
@@ -206,7 +210,7 @@ in `~/.zshrc` *before* the `source $ZSH/oh-my-zsh.sh` line.
 | Setting      | Default | Description                                                                                                                                                        |
 | ------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `shell-init` | `no`    | Evaluate `git flow shell-init zsh`, which wraps `git` so that `git flow worktree add` and `<type> start --worktree` also change the directory of the current shell |
-| `aliases`    | `yes`   | Oh My Zsh standard switch: set to `no` to source the plugin without defining any alias                                                                              |
+| `aliases`    | `yes`   | Oh My Zsh standard switch: set to `no` to source the plugin without defining any alias; the `_git-flow-next-*` helper functions stay defined and do nothing on their own |
 
 ```zsh
 # Follow the branch into its new worktree
