@@ -29,8 +29,9 @@ alias gflc='git flow config list'
 alias gflv='git flow version'
 
 # Shorthands for the branch you are standing on. git-flow-next derives the
-# topic type from the branch prefix, so nothing has to be spelled out.
-alias gflfin='git flow finish'
+# topic type from the branch prefix, so nothing has to be spelled out. Only
+# `gflfin` is more than the command it names: see "Finishing a branch".
+alias gflfin='_git-flow-next-finish auto'
 alias gflpub='git flow publish'
 alias gflupd='git flow update'
 alias gflreb='git flow rebase'
@@ -50,15 +51,106 @@ for _gfn_type in 'b:bugfix' 'f:feature' 'h:hotfix' 'r:release' 's:support'; do
   alias "gfl${_gfn_type%%:*}"="git flow ${_gfn_type#*:}"
 
   for _gfn_action in \
-    'c:checkout' 'd:delete' 'f:finish' 'l:list' 'n:rename' \
+    'c:checkout' 'd:delete' 'l:list' 'n:rename' \
     'p:publish' 's:start' 't:track' 'u:update'; do
     alias "gfl${_gfn_type%%:*}${_gfn_action%%:*}"="git flow ${_gfn_type#*:} ${_gfn_action#*:}"
   done
 
   # Rebasing a topic branch onto its parent is update with the strategy forced.
   alias "gfl${_gfn_type%%:*}b"="git flow ${_gfn_type#*:} update --rebase"
+
+  # Finishing falls back on a branch with no prefix, so it is a function call.
+  alias "gfl${_gfn_type%%:*}f"="_git-flow-next-finish ${_gfn_type#*:}"
 done
 unset _gfn_type _gfn_action
+
+# ---------------------------------------------------------------------------
+# Finishing a branch
+# ---------------------------------------------------------------------------
+#
+# `git flow finish` reads the topic type from the prefix of the branch you are
+# standing on and stops on a branch that carries none:
+#
+#   Error: current branch 'codex/i18n-pass' is not a valid topic branch
+#          (use explicit command, e.g., git flow feature finish)
+#
+# Naming the branch out loud is all git-flow-next needs to finish it after all,
+# which is what the `…f` aliases do instead of walking into the error. A name
+# gets the branch past the prefix check, so it lands on git-flow-next's own
+# confirmation: it lists the merge, and nothing runs on no. The plugin adds no
+# question of its own on top of that one. Every other command keeps failing as
+# it does on the command line, because they really do need a prefix.
+
+# True for an ordinary branch of a git-flow repository: it is not one of the
+# base branches and no configured topic prefix sits in front of its name, which
+# is exactly the branch git-flow-next cannot classify on its own.
+_git-flow-next-plain-branch() {
+  local branch=$1 key prefix value
+  local -a prefixes=()
+
+  [[ -n $branch ]] || return 1
+
+  # Without a single configured prefix git-flow is not set up here, so there is
+  # no explicit command to fall back to either. An empty prefix is left alone
+  # for the same reason: it makes every branch a branch of that type, so
+  # git-flow-next both classifies it on its own and finishes it unconfirmed.
+  while read -r key value; do
+    [[ -n $value ]] || return 1
+    prefixes+=$value
+  done < <(git config --get-regexp '^gitflow\.branch\..*\.prefix$' 2>/dev/null)
+  (( ${#prefixes} )) || return 1
+
+  # The trunk and its siblings are never a topic to finish.
+  [[ $(git config --get "gitflow.branch.$branch.type" 2>/dev/null) == base ]] && return 1
+
+  for prefix in "${prefixes[@]}"; do
+    [[ -n $prefix && $branch == "$prefix"* ]] && return 1
+  done
+
+  return 0
+}
+
+# Run `git flow [<type>] finish` as a `git` call, so the worktree shell-init
+# still sees it. $1 is the branch type the alias spelled out, empty when the
+# type is left to the branch name.
+_git-flow-next-finish() {
+  local type=$1 arg branch
+  shift
+
+  # `gflfin` spells the type it does not have as `auto`, which keeps it a word
+  # of its own for the completion further down: alias expansion reaches the
+  # completion code before quote removal, so an empty argument would get there
+  # as a literal `""`.
+  if [[ $type == auto ]]; then
+    type=
+  fi
+
+  local -a flow=(git flow)
+  [[ -n $type ]] && flow+=$type
+
+  # A branch name on the command line is an explicit choice already.
+  for arg in "$@"; do
+    [[ $arg == -* ]] && continue
+    "$flow[@]" finish "$@"
+    return
+  done
+
+  branch="$(git branch --show-current 2>/dev/null)"
+
+  # A branch git-flow-next classifies itself runs as plain git-flow, and so does
+  # every call without a terminal: a script or an agent is better off with the
+  # error git-flow already gives than with a confirmation nobody answers.
+  if ! _git-flow-next-plain-branch "$branch" || [[ ! -t 0 || ! -t 1 ]]; then
+    "$flow[@]" finish "$@"
+    return
+  fi
+
+  # Naming it is what gets a prefixless branch finished: the type is the one the
+  # alias spelled out, or feature for `gflfin`, and git-flow-next still confirms
+  # the merge it is about to make.
+  local fallback=${type:-feature}
+  git flow "$fallback" finish "$branch" "$@"
+}
 
 # ---------------------------------------------------------------------------
 # Worktree navigation
@@ -118,6 +210,38 @@ if (( $+functions[compdef] )) && command -v git-flow >/dev/null 2>&1; then
       _git "$@"
     }
     compdef _git-flow-bridge git
+  fi
+
+  # The finish aliases call `_git-flow-next-finish` rather than `git flow …`,
+  # and zsh completes an alias by what its expansion starts with, so their
+  # arguments have nothing to complete against until they are pointed back at
+  # git-flow-next. Rewrite the line into the command the alias stands for.
+  if (( $+functions[_git-flow] )); then
+    _git-flow-next-finish-complete() {
+      local -a _gfn_words
+      local _gfn_current=$CURRENT _gfn_status=0
+      _gfn_words=("$words[@]")
+
+      # The words are the function, the type the alias spelled out — `auto` for
+      # the type-agnostic `gflfin` — and then whatever was typed after it. The
+      # `finish` the function runs is not on the line, so add it too.
+      [[ ${words[2]} == (auto|bugfix|feature|hotfix|release|support) ]] || return 1
+
+      if [[ ${words[2]} == auto ]]; then
+        words=(git-flow finish "${(@)_gfn_words[3,-1]}")
+      else
+        words=(git-flow "$words[2]" finish "${(@)_gfn_words[3,-1]}")
+        (( CURRENT++ ))
+      fi
+
+      _git-flow
+      _gfn_status=$?
+
+      words=("${_gfn_words[@]}")
+      CURRENT=$_gfn_current
+      return $_gfn_status
+    }
+    compdef _git-flow-next-finish-complete _git-flow-next-finish
   fi
 
   unset _gfn_cache _gfn_version

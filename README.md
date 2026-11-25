@@ -104,7 +104,7 @@ is never installed or removed.
 | `gflo`   | `git flow overview`    | Show the configured branches and active topics   |
 | `gflc`   | `git flow config list` | Show the resolved git-flow configuration         |
 | `gflv`   | `git flow version`     | Show the git-flow-next version                   |
-| `gflfin` | `git flow finish`      | Finish the branch you are on, type auto-detected |
+| `gflfin` | `git flow finish`      | Finish the branch you are on, prefix optional    |
 | `gflpub` | `git flow publish`     | Publish the branch you are on                    |
 | `gflupd` | `git flow update`      | Update the branch you are on from its parent     |
 | `gflreb` | `git flow rebase`      | Rebase the branch you are on onto its parent     |
@@ -144,6 +144,42 @@ gflff --squash --no-push     # git flow feature finish --squash --no-push
 gflhf                        # git flow hotfix finish   (current hotfix)
 ```
 
+### Finishing a branch that has no prefix
+
+git-flow-next takes the topic type from the prefix of the branch you are
+standing on, and stops on a branch that carries none — `codex/i18n-pass` is not
+a topic branch:
+
+```
+Error: current branch 'codex/i18n-pass' is not a valid topic branch
+       (use explicit command, e.g., git flow feature finish)
+```
+
+Naming the branch is all git-flow-next needs to finish it after all, so `gflfin`
+and the `gfl<type>f` aliases name it instead of stopping there: the name gets
+the branch past the prefix check, and one question is left — git-flow-next's own
+confirmation.
+
+```
+Warning: Branch 'codex/i18n-pass' is not a standard feature branch (missing prefix 'feature/').
+Finishing this branch will:
+1. Merge it into 'develop' using the merge strategy
+3. Delete the branch after successful merge
+Do you want to continue? [y/N]:
+```
+
+The plugin asks nothing on top of that confirmation, and nothing runs on no. The
+fallback only kicks in where it belongs: on an ordinary branch of a repository
+git-flow is set up in, never on the trunk or `develop`, never on a branch that
+already has a prefix, and never without a terminal in front of the command — a
+script or an agent gets git-flow-next's own error, exactly as before. Commands
+other than `finish` need the prefix to work at all, so `gflpub`, `gflupd` and
+the rest keep failing.
+
+The `…f` aliases expand to the plugin's `_git-flow-next-finish`, which is what
+`which gflfin` prints, while typing `git flow finish` yourself still goes
+straight to git-flow-next.
+
 ## Completion
 
 git-flow-next generates its own zsh completion, and the plugin keeps a cached
@@ -159,12 +195,20 @@ copy of it so no process has to be spawned per prompt:
   to `_git-flow`, and hands every other subcommand straight back to `_git`. The
   wrapper is skipped when `_git` is not what completes `git` in your shell, and
   you can drop it again with `compdef _git git`;
-- subcommands, flags and branch names are all read from the binary, so a newer
-  git-flow-next completes its own new commands without a plugin update.
+- subcommands, flags and their descriptions are all read from the binary, so a
+  newer git-flow-next completes its own new commands without a plugin update.
 
-Delete the cache file by hand if completion ever looks stale. Aliases are
-shortcuts rather than completions: `gflff <TAB>` is up to zsh's alias handling,
-while `git flow feature finish <TAB>` always reaches git-flow-next.
+Delete the cache file by hand if completion ever looks stale.
+
+Aliases complete as what they expand to, so `gflpub --<TAB>` offers the flags of
+`git flow publish`. The finish aliases expand to a plugin function instead,
+which is why the plugin registers a completer for it: the line is rewritten to
+the `git flow [<type>] finish …` the alias stands for, so `gflff --<TAB>` and
+`gflfin --<TAB>` list exactly what the command lists.
+
+What is missing everywhere is positional values — git-flow-next completes flags
+only, so a `<TAB>` where a branch name belongs falls back to file names, on
+`git flow feature finish <TAB>` just as much as on `gflff <TAB>`.
 
 ## Configuration
 
@@ -174,7 +218,7 @@ in `~/.zshrc` *before* the `source $ZSH/oh-my-zsh.sh` line.
 | Setting      | Default | Description                                                                                                                                                        |
 | ------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `shell-init` | `no`    | Evaluate `git flow shell-init zsh`, which wraps `git` so that `git flow worktree add` and `<type> start --worktree` also change the directory of the current shell |
-| `aliases`    | `yes`   | Oh My Zsh standard switch: set to `no` to source the plugin without defining any alias                                                                              |
+| `aliases`    | `yes`   | Oh My Zsh standard switch: set to `no` to source the plugin without defining any alias; the `_git-flow-next-*` helper functions stay defined and do nothing on their own |
 
 ```zsh
 # Follow the branch into its new worktree

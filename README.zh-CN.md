@@ -93,7 +93,7 @@ git-flow-next 可执行文件不会被安装，也不会被删除。
 | `gflo`   | `git flow overview`    | 查看分支配置与进行中的主题分支   |
 | `gflc`   | `git flow config list` | 查看解析后的 git-flow 配置       |
 | `gflv`   | `git flow version`     | 查看 git-flow-next 版本          |
-| `gflfin` | `git flow finish`      | 完结当前分支，类型自动识别       |
+| `gflfin` | `git flow finish`      | 完结当前分支，无论有无前缀       |
 | `gflpub` | `git flow publish`     | 推送（发布）当前分支             |
 | `gflupd` | `git flow update`      | 用父分支更新当前分支             |
 | `gflreb` | `git flow rebase`      | 把当前分支 rebase 到父分支       |
@@ -130,6 +130,35 @@ gflff --squash --no-push     # git flow feature finish --squash --no-push
 gflhf                        # git flow hotfix finish   （当前 hotfix）
 ```
 
+### 完结没有前缀的分支
+
+git-flow-next 依据当前分支名前缀判断主题类型，遇到没有前缀的分支会直接停下——`codex/i18n-pass`
+并不是主题分支：
+
+```
+Error: current branch 'codex/i18n-pass' is not a valid topic branch
+       (use explicit command, e.g., git flow feature finish)
+```
+
+把分支名写出来 git-flow-next 照样能完结它，所以 `gflfin` 与 `gfl<类型>f` 这些别名直接把分支名
+递给它，而不是就此中断。名字让分支越过前缀检查，于是只剩一个问题——git-flow-next 自己的确认：
+
+```
+Warning: Branch 'codex/i18n-pass' is not a standard feature branch (missing prefix 'feature/').
+Finishing this branch will:
+1. Merge it into 'develop' using the merge strategy
+3. Delete the branch after successful merge
+Do you want to continue? [y/N]:
+```
+
+插件不会在这道确认之上再多问一句，回答 n 什么都不做。兜底只在它该出现的地方生效：git-flow
+已配置仓库里的普通分支，主干与 `develop` 不管，本来就有前缀的主题分支不管，命令面前没有终端时
+同样不管——脚本或 agent 拿到的仍是 git-flow-next 原本的报错。`finish` 之外的命令没有前缀根本
+无从执行，所以 `gflpub`、`gflupd` 等保持原样继续报错。
+
+`…f` 这些别名展开为插件的 `_git-flow-next-finish`，`which gflfin` 打印的就是它；自己直接敲
+`git flow finish` 仍然原样交给 git-flow-next。
+
 ## 补全
 
 git-flow-next 自带 zsh 补全脚本生成器，插件会缓存一份，避免每次补全都要启动进程：
@@ -140,10 +169,16 @@ git-flow-next 自带 zsh 补全脚本生成器，插件会缓存一份，避免�
   在补全 `git <子命令>` 时自动接管——但 zsh 5.9 重写后丢掉了这一步，导致 `git flow <TAB>` 一个候选都不给——
   因此插件会包装 `git` 的补全：只把 `git flow …` 转给 `_git-flow`，其余子命令原封不动交还 `_git`。
   若你 shell 里的 `git` 补全不是 `_git`，插件不会插手；也可以手动执行 `compdef _git git` 撤销这层包装；
-- 子命令、参数与分支名都由二进制实时提供，升级 git-flow-next 后无需更新插件即可获得新命令的补全。
+- 子命令、参数及其说明都由二进制实时提供，升级 git-flow-next 后无需更新插件即可获得新命令的补全。
 
-如果补全看起来过期，手动删除该缓存文件即可。别名只是简写而非补全：`gflff <TAB>` 取决于 zsh 的别名展开，
-而 `git flow feature finish <TAB>` 一定能抵达 git-flow-next。
+如果补全看起来过期，手动删除该缓存文件即可。
+
+别名按它展开后的命令补全，所以 `gflpub --<TAB>` 给出的是 `git flow publish` 的参数；完结类别名展开成
+插件函数，因此插件为它另注册了补全——把命令行还原成别名所代表的 `git flow [<类型>] finish …`，
+于是 `gflff --<TAB>`、`gflfin --<TAB>` 的候选与直接执行命令时完全一致。
+
+各处都缺的是位置参数：git-flow-next 只补参数名，不补分支名，所以在应当填分支名的位置 `<TAB>` 会退回文件名，
+`git flow feature finish <TAB>` 与 `gflff <TAB>` 表现相同。
 
 ## 配置
 
@@ -153,7 +188,7 @@ git-flow-next 自带 zsh 补全脚本生成器，插件会缓存一份，避免�
 | 配置项       | 默认值 | 说明                                                                                                             |
 | ------------ | ------ | ---------------------------------------------------------------------------------------------------------------- |
 | `shell-init` | `no`   | 执行 `git flow shell-init zsh`，把 `git` 包装成函数，使 `git flow worktree add` 与 `<type> start --worktree` 同时切换当前 shell 所在目录 |
-| `aliases`    | `yes`  | Oh My Zsh 通用开关：设为 `no` 时加载插件但不定义任何别名                                                          |
+| `aliases`    | `yes`  | Oh My Zsh 通用开关：设为 `no` 时加载插件但不定义任何别名；`_git-flow-next-*` 辅助函数仍会定义，没有别名调用它们时不做事                                |
 
 ```zsh
 # 新建 worktree 后自动进入该目录
