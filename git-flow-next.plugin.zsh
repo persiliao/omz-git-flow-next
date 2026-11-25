@@ -59,7 +59,7 @@ for _gfn_type in 'b:bugfix' 'f:feature' 'h:hotfix' 'r:release' 's:support'; do
   # Rebasing a topic branch onto its parent is update with the strategy forced.
   alias "gfl${_gfn_type%%:*}b"="git flow ${_gfn_type#*:} update --rebase"
 
-  # Finishing asks before falling back, so it is a function call.
+  # Finishing falls back on a branch with no prefix, so it is a function call.
   alias "gfl${_gfn_type%%:*}f"="_git-flow-next-finish ${_gfn_type#*:}"
 done
 unset _gfn_type _gfn_action
@@ -75,10 +75,11 @@ unset _gfn_type _gfn_action
 #          (use explicit command, e.g., git flow feature finish)
 #
 # Naming the branch out loud is all git-flow-next needs to finish it after all,
-# so the `…f` aliases ask whether that is what you meant instead of walking
-# into the error. Saying yes still lands on git-flow-next's own confirmation,
-# which lists the merge it is about to make. Every other command keeps failing
-# as it does on the command line, because they really do need a prefix.
+# which is what the `…f` aliases do instead of walking into the error. A name
+# gets the branch past the prefix check, so it lands on git-flow-next's own
+# confirmation: it lists the merge, and nothing runs on no. The plugin adds no
+# question of its own on top of that one. Every other command keeps failing as
+# it does on the command line, because they really do need a prefix.
 
 # True for an ordinary branch of a git-flow repository: it is not one of the
 # base branches and no configured topic prefix sits in front of its name, which
@@ -90,8 +91,11 @@ _git-flow-next-plain-branch() {
   [[ -n $branch ]] || return 1
 
   # Without a single configured prefix git-flow is not set up here, so there is
-  # no explicit command to fall back to either.
+  # no explicit command to fall back to either. An empty prefix is left alone
+  # for the same reason: it makes every branch a branch of that type, so
+  # git-flow-next both classifies it on its own and finishes it unconfirmed.
   while read -r key value; do
+    [[ -n $value ]] || return 1
     prefixes+=$value
   done < <(git config --get-regexp '^gitflow\.branch\..*\.prefix$' 2>/dev/null)
   (( ${#prefixes} )) || return 1
@@ -133,22 +137,18 @@ _git-flow-next-finish() {
 
   branch="$(git branch --show-current 2>/dev/null)"
 
-  # Nothing to ask about on a branch git-flow-next classifies itself, and no
-  # prompt to show without a terminal, where a script or an agent would only
-  # block on a question nobody is there to answer. Both run as plain git-flow.
+  # A branch git-flow-next classifies itself runs as plain git-flow, and so does
+  # every call without a terminal: a script or an agent is better off with the
+  # error git-flow already gives than with a confirmation nobody answers.
   if ! _git-flow-next-plain-branch "$branch" || [[ ! -t 0 || ! -t 1 ]]; then
     "$flow[@]" finish "$@"
     return
   fi
 
+  # Naming it is what gets a prefixless branch finished: the type is the one the
+  # alias spelled out, or feature for `gflfin`, and git-flow-next still confirms
+  # the merge it is about to make.
   local fallback=${type:-feature}
-  printf "Branch '%s' is not a git-flow topic branch.\n" "$branch"
-  read -q "?Finish it as a ${fallback} branch? [y/N] " || {
-    print
-    return 1
-  }
-  print
-
   git flow "$fallback" finish "$branch" "$@"
 }
 
